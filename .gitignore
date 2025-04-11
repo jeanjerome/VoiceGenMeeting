@@ -1,0 +1,6 @@
+*.json
+*.mp3
+*.wav
+*.txt
+
+.DS_store

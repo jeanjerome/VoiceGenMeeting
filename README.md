@@ -1,5 +1,10 @@
 # 🎙️ VoiceGenMeeting
 
+> **Note:** A more advanced version of this project is available on the `lib/kokoro` branch, utilizing the [Kokoro](https://github.com/hexgrad/kokoro) TTS engine. This version offers improved performance and enhanced text-to-speech capabilities. The [`lib/kokoro`](https://github.com/jeanjerome/VoiceGenMeeting/tree/lib/kokoro) branch is planned to be merged into the main branch in the near future.
+> 
+> However, ongoing tests with various TTS engines are still underway to identify the absolute best text-to-speech solution, which could potentially lead to further significant improvements in the project.
+
+
 **VoiceGenMeeting** is a command-line tool that generates synthetic meeting audio from a simple text-based transcript, assigning a unique voice to each speaker. It's ideal for testing transcription, meeting analysis, or speech recognition tools.
 
 This project is powered by [**OuteTTS**](https://github.com/edwko/OuteTTS), an open-source text-to-speech engine built on top of llama.cpp and Transformers.

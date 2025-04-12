@@ -3,4 +3,7 @@
 *.wav
 *.txt
 
+!example*.txt
+!example*.wav
+
 .DS_store

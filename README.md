@@ -27,8 +27,8 @@ VoiceGenMeeting/
 ├── data/
 │   ├── speakers/             # Raw speaker audio files (e.g. marc.mp3)
 │   └── profiles/             # Generated speaker profiles (.json)
-├── transcription.txt         # Example transcript with multiple speakers
-└── output.wav                # Generated audio output
+├── example*.txt              # Example transcript with multiple speakers
+└── example*.wav              # Example result of generated audio output
 ```
 
 

@@ -1,7 +1,5 @@
 import sys
-import random
 import os
-import io
 from pathlib import Path
 from pydub import AudioSegment
 
@@ -9,7 +7,9 @@ import outetts
 import soundfile as sf
 import numpy as np
 
-# === Gestion des profils de locuteur personnalisés ===
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+
+# === Custom speaker profile management ===
 def get_or_create_speaker_profile(name: str, interface: outetts.Interface,
                                    speaker_dir: str = "data/speakers",
                                    profile_dir: str = "data/profiles"):
@@ -18,37 +18,37 @@ def get_or_create_speaker_profile(name: str, interface: outetts.Interface,
     profile_path = Path(profile_dir) / f"{speaker_name}.json"
 
     if profile_path.exists():
-        print(f"[INFO] Chargement du profil existant pour {name}")
+        print(f"[INFO] Loading existing profile for {name}")
         return interface.load_speaker(str(profile_path))
 
     if not input_path.exists():
-        raise FileNotFoundError(f"[ERREUR] Fichier audio introuvable pour {name} : {input_path}")
+        raise FileNotFoundError(f"[ERROR] Audio file not found for {name}: {input_path}")
 
-    print(f"[INFO] Traitement du fichier de {name} : découpe et conversion en WAV")
+    print(f"[INFO] Processing {name}'s file: cutting and converting to WAV")
 
-    # Convertir le MP3 en WAV (mono, 44.1 kHz, max 20s)
+    # Convert MP3 to WAV (mono, 44.1 kHz, max 15s)
     audio = AudioSegment.from_file(input_path)
     audio = audio.set_channels(1).set_frame_rate(44100)
     max_duration_ms = 15 * 1000
     if len(audio) > max_duration_ms:
         audio = audio[:max_duration_ms]
 
-    # Exporter en WAV temporaire
+    # Export to temporary WAV
     tmp_wav_path = Path(speaker_dir) / f"{speaker_name}_processed.wav"
     audio.export(tmp_wav_path, format="wav")
 
-    # Entraîner le profil depuis le WAV temporaire
+    # Train profile from temporary WAV
     speaker = interface.create_speaker(str(tmp_wav_path))
     os.makedirs(profile_dir, exist_ok=True)
     interface.save_speaker(speaker, str(profile_path))
 
-    print(f"[INFO] Profil enregistré pour {name} → {profile_path}")
+    print(f"[INFO] Profile saved for {name} → {profile_path}")
     return speaker
 
-# === Script principal ===
+# === Main script ===
 def main():
     if len(sys.argv) < 2:
-        print("Utilisation : python3 conversation_tts.py <fichier_transcription.txt> [fichier_sortie.wav]")
+        print("Usage: python3 conversation_tts.py <transcript_file.txt> [output_file.wav]")
         sys.exit(1)
 
     input_path = sys.argv[1]
@@ -62,7 +62,7 @@ def main():
 
     voice_map = {}
     audio_segments = []
-    sample_rate = 44100  # défini manuellement pour correspondre à l'audio d'entrée
+    sample_rate = 44100  # manually defined to match input audio
 
     with open(input_path, "r", encoding="utf-8") as f:
         for line in f:
@@ -81,7 +81,7 @@ def main():
                     speaker_profile = get_or_create_speaker_profile(name, interface)
                     voice_map[name] = speaker_profile
                 except Exception as e:
-                    print(f"[ERREUR] Impossible de charger/enregistrer le profil de {name} : {e}")
+                    print(f"[ERROR] Unable to load/save profile for {name}: {e}")
                     continue
 
             speaker = voice_map[name]
@@ -107,15 +107,15 @@ def main():
                 audio_segments.append(audio_data)
                 audio_segments.append(pause)
             except Exception as e:
-                print(f"[ERREUR] Erreur de synthèse pour {name} : {e}")
+                print(f"[ERROR] Synthesis error for {name}: {e}")
                 continue
 
     if audio_segments:
         full_audio = np.concatenate(audio_segments)
         sf.write(output_path, full_audio, sample_rate)
-        print(f"\n✅ Audio généré avec succès : {output_path}")
+        print(f"\n✅ Audio generated successfully: {output_path}")
     else:
-        print("\n⚠️ Aucun segment audio généré. Vérifie le contenu de ton fichier texte et les profils disponibles.")
+        print("\n⚠️ No audio segments generated. Check your text file content and available profiles.")
 
 if __name__ == "__main__":
     main()

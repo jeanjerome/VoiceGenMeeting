@@ -1,12 +1,11 @@
 import sys
-import os
 from pathlib import Path
 from pydub import AudioSegment
 import numpy as np
 import soundfile as sf
-from typing import Dict, List, Optional, Union
+from typing import Dict
 
-# Import TTS from Coqui instead of OuteTTS
+# Import the updated Coqui TTS API
 from TTS.api import TTS
 
 # === Custom speaker profile management ===
@@ -40,7 +39,8 @@ def prepare_speaker_audio(name: str, speaker_dir: str = "data/speakers", max_dur
     return str(processed_wav_path)
 
 def generate_speech_for_line(tts: TTS, name: str, dialogue: str, 
-                             speaker_files: Dict[str, str]) -> np.ndarray:
+                             speaker_files: Dict[str, str],
+                             language: str = "en") -> np.ndarray:
     """Generate speech for a single line of dialogue"""
     
     if name not in speaker_files:
@@ -50,50 +50,74 @@ def generate_speech_for_line(tts: TTS, name: str, dialogue: str,
     speaker_wav = speaker_files[name]
     
     try:
-        # For XTTS models, we need to specify the speaker audio and language
-        if tts.model_name == "tts_models/multilingual/multi-dataset/xtts_v2":
-            audio = tts.tts(dialogue, speaker_wav=speaker_wav, language="fr")
-        # For YourTTS
-        elif "your_tts" in tts.model_name:
-            audio = tts.tts(dialogue, speaker_wav=speaker_wav, language="fr")
-        # For Bark
-        elif "bark" in tts.model_name:
-            audio = tts.tts(dialogue, speaker_wav=speaker_wav)
-        # For VITS or other multi-speaker models, we would use speaker embedding
+        # Generate speech using the current model
+        # For XTTS or models that support voice cloning via speaker_wav
+        if "xtts" in tts.model_name or tts.is_multi_speaker:
+            audio = tts.tts(dialogue, speaker_wav=speaker_wav, language=language)
+        # Fallback for other model types
         else:
-            # Fallback to voice conversion for models without built-in voice cloning
-            audio = tts.tts(dialogue)
-            # Use voice conversion if available
-            if hasattr(tts, "voice_conversion"):
-                audio = tts.voice_conversion(audio, speaker_wav)
+            # Use voice conversion if the model doesn't natively support cloning
+            temp_audio = tts.tts(dialogue)
+            print(f"[INFO] Using voice conversion for {name}")
+            audio = tts.voice_conversion(source_wav=temp_audio, target_wav=speaker_wav)
+        
+        # Get the actual sample rate from the model
+        # This is crucial because TTS models might use different rates (22050 Hz is common)
+        if hasattr(tts, "synthesizer") and hasattr(tts.synthesizer, "output_sample_rate"):
+            original_sample_rate = tts.synthesizer.output_sample_rate
+            print(f"[INFO] Model output sample rate: {original_sample_rate} Hz")
+        else:
+            # Default TTS sample rate if not available (many TTS models use 22050)
+            original_sample_rate = 22050
+            print(f"[INFO] Using default TTS sample rate: {original_sample_rate} Hz")
+            
+        return audio
     except Exception as e:
         print(f"[ERROR] Synthesis error for {name}: {e}")
         return np.array([])
-    
-    return audio
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python3 conversation_tts_coqui.py <transcript_file.txt> [output_file.wav]")
+        print("Usage: python3 conversation_tts.py <transcript_file.txt> [output_file.wav] [language_code]")
         sys.exit(1)
 
     input_path = sys.argv[1]
     output_path = sys.argv[2] if len(sys.argv) > 2 else "output.wav"
+    language = sys.argv[3] if len(sys.argv) > 3 else "en"
     
-    # Choose the TTS model
-    # XTTS v2 gives the best quality for multilingual voice cloning
+    # Choose the TTS model - XTTS v2 is preferred for the best voice cloning
     model_name = "tts_models/multilingual/multi-dataset/xtts_v2"
     
     print(f"[INFO] Initializing Coqui TTS with model: {model_name}")
-    # Get device (GPU if available, otherwise CPU)
-    device = "cuda" if "CUDA_VISIBLE_DEVICES" in os.environ else "cpu"
-    tts = TTS(model_name=model_name).to(device)
+     # Get device (CUDA/MPS if available, otherwise CPU)
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif hasattr(torch, 'mps') and torch.backends.mps.is_available():
+        device = "mps"  # For Apple Silicon Macs
+    else:
+        device = "cpu"
     
-    print("[INFO] TTS model loaded")
-
+    print(f"[INFO] Using device: {device}")
+    
+    try:
+        tts = TTS(model_name).to(device)
+        print("[INFO] TTS model loaded successfully")
+    except Exception as e:
+        print(f"[ERROR] Failed to load model {model_name}: {e}")
+        print("[INFO] Falling back to default model")
+        tts = TTS().to(device)
+    
+    # Determine the correct sample rate from the model
+    if hasattr(tts, "synthesizer") and hasattr(tts.synthesizer, "output_sample_rate"):
+        sample_rate = tts.synthesizer.output_sample_rate
+    else:
+        # Many TTS models use 22050 Hz as the default sample rate
+        sample_rate = 22050
+    
+    print(f"[INFO] Using sample rate: {sample_rate} Hz")
+    
     speaker_files = {}
     audio_segments = []
-    sample_rate = 44100  # manually defined to match input audio
 
     # First pass: prepare all speaker files
     seen_speakers = set()
@@ -132,7 +156,7 @@ def main():
 
             print(f"[INFO] Generating speech for {name}: '{dialogue}'")
             
-            audio_data = generate_speech_for_line(tts, name, dialogue, speaker_files)
+            audio_data = generate_speech_for_line(tts, name, dialogue, speaker_files, language)
             
             if len(audio_data) > 0:
                 # Add a pause between utterances
@@ -149,10 +173,13 @@ def main():
         if np.max(np.abs(full_audio)) > 0.95:
             full_audio = 0.95 * full_audio / np.max(np.abs(full_audio))
             
+        # Use the appropriate sample rate for writing the output file
+        print(f"[INFO] Writing output with sample rate: {sample_rate} Hz")
         sf.write(output_path, full_audio, sample_rate)
         print(f"\n✅ Audio generated successfully: {output_path}")
     else:
         print("\n⚠️ No audio segments generated. Check your text file content and available profiles.")
 
 if __name__ == "__main__":
+    import torch  # Import torch here to avoid import errors if not available
     main()

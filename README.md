@@ -1,14 +1,40 @@
 # 🎙️ VoiceGenMeeting
 
-> **Note:** A more advanced version of this project is available on the `lib/kokoro` branch, utilizing the [Kokoro](https://github.com/hexgrad/kokoro) TTS engine. This version offers improved performance and enhanced text-to-speech capabilities. The [`lib/kokoro`](https://github.com/jeanjerome/VoiceGenMeeting/tree/lib/kokoro) branch is planned to be merged into the main branch in the near future.
-> 
-> However, ongoing tests with various TTS engines are still underway to identify the absolute best text-to-speech solution, which could potentially lead to further significant improvements in the project.
-
-
 **VoiceGenMeeting** is a command-line tool that generates synthetic meeting audio from a simple text-based transcript, assigning a unique voice to each speaker. It's ideal for testing transcription, meeting analysis, or speech recognition tools.
 
-This project is powered by [**OuteTTS**](https://github.com/edwko/OuteTTS), an open-source text-to-speech engine built on top of llama.cpp and Transformers.
+## TTS Engine Versions
 
+This project offers multiple implementations using different text-to-speech (TTS) engines. Choose the version that best suits your specific requirements:
+
+### 1. Coqui-TTS Branch [`lib/coqui-tts`](https://github.com/jeanjerome/VoiceGenMeeting/tree/lib/coqui-tts)
+- **Recommended for**: Multilingual projects, especially non-English content
+- **Strengths**: 
+  - Exceptional phonetic accuracy across languages
+  - Robust language support
+- **Limitations**: Slightly monotonous intonation
+
+### 2. Kokoro Branch [`lib/kokoro`](https://github.com/jeanjerome/VoiceGenMeeting/tree/lib/kokoro)
+- **Recommended for**: English-language projects
+- **Strengths**:
+  - Nuanced intonation
+  - Expressive English speech synthesis
+- **Limitations**: Poor handling of non-English phonetics
+
+### 3. OuteTTS Branch [`lib/outetts`](https://github.com/jeanjerome/VoiceGenMeeting/tree/lib/outetts)
+- **Based on**: Open-source TTS engine using llama.cpp and Transformers
+- **Good for**: Experimental and lightweight use cases
+
+## Choosing the Right Version
+
+- **Multilingual Project**: Use Coqui-TTS branch
+- **English-Only Project**: Use Kokoro branch
+- **Experimental or Resource-Constrained Setup**: Use OuteTTS branch
+
+We continuously evaluate and improve these implementations. Future versions may integrate the best features from each engine.
+
+## Example Comparisons
+
+Refer to the `example.wav` and `example_fr.wav` files in each branch to hear the differences in voice synthesis quality.
 
 ## Features
 
@@ -35,78 +61,6 @@ VoiceGenMeeting/
 ├── example*.txt              # Example transcript with multiple speakers
 └── example*.wav              # Example result of generated audio output
 ```
-
-
-## Installation
-
-### Prerequisites
-- Python 3.9+
-- [ffmpeg](https://ffmpeg.org/) (required by `pydub` for audio conversion)
-
-### Create a virtual environment (recommended)
-Using conda:
-```bash
-conda create -n voicegen python=3.9 -y
-conda activate voicegen
-```
-
-### Install Python dependencies
-```bash
-pip install pydub
-```
-
-### Platform-specific installation
-
-#### On macOS (Apple Silicon or Intel)
-```bash
-brew install ffmpeg
-CMAKE_ARGS="-DGGML_METAL=on" pip install outetts
-```
-
-#### On Linux (Ubuntu/Debian)
-```bash
-sudo apt install ffmpeg
-pip install outetts
-```
-
-#### On Windows
-- Download and install [ffmpeg](https://ffmpeg.org/download.html) and add it to your PATH
-- Then install OuteTTS:
-```bash
-pip install outetts
-```
-
-
-## Usage
-
-### 1. Prepare a `transcription.txt` file
-```text
-Marc : Good morning.
-Julie : Ready to get started.
-```
-
-### 2. Add voice samples
-Place short audio files in `data/speakers`, named after the speakers in your transcript (e.g. `marc.mp3`, `julie.wav`).
-
-**Requirements for each file:**
-- Audio format: `.mp3` or `.wav`
-- Duration: ideally between 5 and 15 seconds (automatically truncated if longer)
-- Content: clean voice, preferably with neutral tone, no background noise
-- Channels: mono (or will be converted)
-- Sample rate: 44.1 kHz (will be converted if needed)
-
-Each file will be automatically converted to mono, 44.1kHz, and truncated to 15 seconds. to mono, 44.1kHz, and truncated to 15 seconds.
-
-### 3. Generate audio
-```bash
-python conversation_tts.py transcription.txt output.wav
-```
-
-
-## Resources
-- [OuteTTS on GitHub](https://github.com/edwko/OuteTTS)
-- [HuggingFace TTS Models](https://huggingface.co/models?pipeline_tag=text-to-speech)
-
 
 ## License
 [MIT](LICENSE)

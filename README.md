@@ -1,5 +1,20 @@
 # 🎙️ VoiceGenMeeting
 
+> ## TTS Engine Evaluation
+>
+> This project is available in multiple versions in different branches, each using a different text-to-speech engine:
+> - [`lib/outetts`](https://github.com/jeanjerome/VoiceGenMeeting/tree/lib/outetts) - Using [OuteTTS](https://github.com/edwko/OuteTTS), an open-source TTS engine based on llama.cpp and Transformers.
+> - [`lib/kokoro`](https://github.com/jeanjerome/VoiceGenMeeting/tree/lib/kokoro) - Using [Kokoro](https://github.com/hexgrad/kokoro), offering improved performance and enhanced TTS capabilities.
+> - [`lib/coqui-tts`](https://github.com/jeanjerome/VoiceGenMeeting/tree/lib/coqui-tts) - Using [Coqui-TTS](https://github.com/idiap/coqui-ai-TTS), the current main branch which delivers the best results to date (see example.wav and example_fr.wav files for comparison).
+>
+> ## Key Findings 
+>
+> Through comprehensive testing of various text-to-speech engines, we've identified nuanced performance characteristics:
+> - `Coqui-TTS` demonstrates superior voice quality (phonetic accuracy) for non-English languages but lacks dynamic intonation.
+> - The `Kokoro` TTS engine shows nuanced intonation for English content but struggles with non-English phonetic subtleties.
+>
+> Ongoing evaluation continues to refine our understanding of these technologies, with plans to integrate the most promising features from each engine in future iterations.
+
 **VoiceGenMeeting** is a command-line tool that generates synthetic meeting audio from a simple text-based transcript, assigning a unique voice to each speaker. It's ideal for testing transcription, meeting analysis, or speech recognition tools.
 
 This project is powered by [**Kokoro**](https://huggingface.co/hexgrad/Kokoro-82M), an open-weight text-to-speech model with 82 million parameters, delivering high-quality and efficient synthetic voices.
